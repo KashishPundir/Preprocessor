@@ -94,6 +94,13 @@ binary indicators
 3️⃣ Encoding
 4️⃣ Scaling
 
+ ## 🎥 Demo Video
+
+Watch how **Preprocessor** intelligently suggests preprocessing steps:
+
+▶️ https://user-images.githubusercontent.com/xxxx/preprocessor-demo.mp4
+
+
 📂 Project Structure
 PREPROCESSOR/
 │
@@ -141,3 +148,4 @@ If this project helps you:
 🐛 Report issues
 
 💡 Suggest improvements
+
