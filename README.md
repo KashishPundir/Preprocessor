@@ -26,6 +26,8 @@ Preprocessor helps you avoid common mistakes like:
 
 ### ✨ Key Features:
 
+**✅ DataType Correctness**
+
 **✅ Missing Value Analysis**
 - Detects missing values
 - Suggests mean / median / mode strategies
@@ -50,13 +52,15 @@ Preprocessor helps you avoid common mistakes like:
 
 **✅ Correct Execution Order (Guaranteed):**
 
-1️⃣ Missing Values
+1️⃣ DataType Correctness
 
-2️⃣ Transformation
+2️⃣ Missing Values
 
-3️⃣ Encoding
+3️⃣ Transformation
 
-4️⃣ Scaling
+4️⃣ Encoding
+
+5️⃣ Scaling
 
  ### 🎥 Demo Video:
 
@@ -73,7 +77,7 @@ PREPROCESSOR/
 ├── demo/
 │   └── run_pipeline.py        # Example usage
 │
-├── src/
+├──
 │   └── preprocessor/
 │       ├── __init__.py
 │       ├── combine_all.py     # Main pipeline
@@ -82,6 +86,7 @@ PREPROCESSOR/
 │       ├── encoding.py        # Encoding suggestions
 │       ├── scaling.py         # Model-aware scaling
 │       └── printers.py        # Pretty report printing
+│       └── datatype_fixer.py  # datatype correctness suggestion
 │
 ├── pyproject.toml
 ├── requirements.txt
@@ -116,5 +121,6 @@ If this project helps you:
 🐛 Report issues
 
 💡 Suggest improvements
+
 
 
