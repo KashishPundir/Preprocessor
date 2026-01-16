@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import skew
 from typing import Optional
+from collections import defaultdict
 
 
 # -------------------- MODEL GROUPS --------------------
@@ -41,12 +42,11 @@ def suggest_transformations(
 ) -> dict:
     """
     Expert-level transformation suggestion engine.
-    Suggests transformations only when statistically
-    and model-wise justified.
+    Groups columns by transformation type and
+    generates clean, scalable code.
     """
 
     numeric_cols = df.select_dtypes(include="number").columns
-
     model_name = model.lower().replace(" ", "") if model else None
 
     # --------- Model-based early exit ---------
@@ -59,12 +59,12 @@ def suggest_transformations(
         }
 
     strategies = {}
+    grouped_cols = defaultdict(list)
     reasons = []
-    code_blocks = []
 
+    # -------------------- DETECTION LOOP --------------------
     for col in numeric_cols:
 
-        # Skip target variable
         if target and col == target:
             continue
 
@@ -72,60 +72,39 @@ def suggest_transformations(
         if data.empty:
             continue
 
-        # Skip binary numeric features
         if data.nunique() <= 2:
             continue
 
-        # Skip ID-like columns
         if data.nunique() / len(data) > 0.95:
             continue
 
         col_skew = skew(data)
 
-        # Nearly symmetric → no transform
         if abs(col_skew) <= 0.5:
             continue
 
-        # ---------- Decide transformation ----------
+        # --------- Decide transformation ---------
         if col_skew > skew_threshold:
-
             if (data <= 0).any():
                 method = "Yeo-Johnson Transformation"
-                code = (
-                    "from sklearn.preprocessing import PowerTransformer\n"
-                    "pt = PowerTransformer(method='yeo-johnson')\n"
-                    f"df['{col}_yj'] = pt.fit_transform(df[['{col}']])"
-                )
-
             else:
                 method = "Log Transformation (log1p)"
-                code = (
-                    "import numpy as np\n"
-                    f"df['{col}_log'] = np.log1p(df['{col}'])"
-                )
 
         elif col_skew < -skew_threshold:
             method = "Yeo-Johnson Transformation"
-            code = (
-                "from sklearn.preprocessing import PowerTransformer\n"
-                "pt = PowerTransformer(method='yeo-johnson')\n"
-                f"df['{col}_yj'] = pt.fit_transform(df[['{col}']])"
-            )
 
         else:
             method = "Square Root Transformation"
-            code = (
-                "import numpy as np\n"
-                f"df['{col}_sqrt'] = np.sqrt(df['{col}'])"
-            )
 
         strategies[col] = method
+        grouped_cols[method].append(col)
+
         reasons.append(
             f"{col} has skewness = {round(col_skew, 2)}. "
             "Transformation improves variance stability and model reliability."
         )
-        code_blocks.append(f"# {col}\n{code}")
 
+    # -------------------- NO TRANSFORM CASE --------------------
     if not strategies:
         return {
             "message": (
@@ -134,6 +113,38 @@ def suggest_transformations(
             )
         }
 
+    # -------------------- GROUPED CODE GENERATION --------------------
+    code_blocks = []
+
+    if "Square Root Transformation" in grouped_cols:
+        cols = grouped_cols["Square Root Transformation"]
+        code_blocks.append(
+            "import numpy as np\n"
+            f"sqrt_cols = {cols}\n"
+            "for col in sqrt_cols:\n"
+            "    df[f'{col}_sqrt'] = np.sqrt(df[col])"
+        )
+
+    if "Log Transformation (log1p)" in grouped_cols:
+        cols = grouped_cols["Log Transformation (log1p)"]
+        code_blocks.append(
+            "import numpy as np\n"
+            f"log_cols = {cols}\n"
+            "for col in log_cols:\n"
+            "    df[f'{col}_log'] = np.log1p(df[col])"
+        )
+
+    if "Yeo-Johnson Transformation" in grouped_cols:
+        cols = grouped_cols["Yeo-Johnson Transformation"]
+        code_blocks.append(
+            "from sklearn.preprocessing import PowerTransformer\n"
+            "pt = PowerTransformer(method='yeo-johnson')\n"
+            f"yj_cols = {cols}\n"
+            "for col in yj_cols:\n"
+            "    df[f'{col}_yj'] = pt.fit_transform(df[[col]])"
+        )
+
+    # -------------------- FINAL RETURN --------------------
     return {
         "strategy": strategies,
         "reason": (
