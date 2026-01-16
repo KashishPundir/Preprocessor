@@ -47,30 +47,23 @@ def suggest_scaling(
     Suggest scaling ONLY for original continuous numeric features.
     """
 
-    result = {
-        "scale": False,
-        "scaler": None,
-        "columns_scaled": [],
-        "reason": "",
-        "code": ""
-    }
-
     model_name = model_name.lower()
 
-    # -------- Model-based early exit --------
+    # -------- Model-based early exit (NO SCALING) --------
     if model_name in TREE_MODELS:
-        result["reason"] = (
-            "Tree-based models are scale-invariant. "
-            "Scaling is not required."
-        )
-        return result
+        return {
+            "message": (
+                f"ℹ️ Model '{model_name}' is tree-based and "
+                "does not require feature scaling."
+            )
+        }
 
     if model_name not in SCALE_SENSITIVE_MODELS:
-        result["reason"] = (
-            "Model not recognized as scale-sensitive. "
-            "Scaling left to user discretion."
-        )
-        return result
+        return {
+            "message": (
+                f"ℹ️ Model '{model_name}' is not recognized as scale-sensitive. "
+            )
+        }
 
     # -------- Identify scale-eligible columns --------
     if original_numeric_cols is None:
@@ -83,8 +76,9 @@ def suggest_scaling(
     ]
 
     if not continuous_numeric_cols:
-        result["reason"] = "No continuous numeric features eligible for scaling."
-        return result
+        return {
+            "message": "ℹ️ No continuous numeric features eligible for scaling."
+        }
 
     numeric_data = X[continuous_numeric_cols]
 
@@ -93,33 +87,36 @@ def suggest_scaling(
 
     heavy_outliers = (outlier_ratios > 0.05).any()
 
-    result["scale"] = True
-    result["columns_scaled"] = continuous_numeric_cols
-
     # -------- Choose scaler --------
     if heavy_outliers:
-        result["scaler"] = "RobustScaler"
-        result["reason"] = (
-            "Heavy outliers detected in continuous numeric features. "
-            "RobustScaler is recommended."
-        )
-        result["code"] = f"""
+        return {
+            "scale": True,
+            "scaler": "RobustScaler",
+            "columns_scaled": continuous_numeric_cols,
+            "reason": (
+                "Heavy outliers detected in continuous numeric features. "
+                "RobustScaler is recommended."
+            ),
+            "code": f"""
 from sklearn.preprocessing import RobustScaler
 
 scaler = RobustScaler()
 X[{continuous_numeric_cols}] = scaler.fit_transform(X[{continuous_numeric_cols}])
 """
-    else:
-        result["scaler"] = "StandardScaler"
-        result["reason"] = (
+        }
+
+    return {
+        "scale": True,
+        "scaler": "StandardScaler",
+        "columns_scaled": continuous_numeric_cols,
+        "reason": (
             "No significant outliers detected. "
             "StandardScaler is recommended."
-        )
-        result["code"] = f"""
+        ),
+        "code": f"""
 from sklearn.preprocessing import StandardScaler
 
 scaler = StandardScaler()
 X[{continuous_numeric_cols}] = scaler.fit_transform(X[{continuous_numeric_cols}])
 """
-
-    return result
+    }
